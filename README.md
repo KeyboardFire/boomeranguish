@@ -1,3 +1,3 @@
 # Boomeranguish
 
-http://boomeranguish.github.io/
+http://keyboardfire.github.io/boomeranguish/
