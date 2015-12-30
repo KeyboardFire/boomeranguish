@@ -1,9 +1,11 @@
 # Boomeranguish
 
-http://keyboardfire.github.io/boomeranguish/
+## http://keyboardfire.github.io/boomeranguish/
 
-To use Boomeranguish,
+To compile Boomeranguish (so far only tested on Debian):
 
-1. Clone this repository anywhere you want.
+    git clone https://github.com/KeyboardFire/boomeranguish.git
+    cd boomeranguish
+    make
 
-2. TODO
+This will generate the executable `bin/boomeranguish`.

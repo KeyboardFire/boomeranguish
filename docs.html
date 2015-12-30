@@ -12,6 +12,7 @@
           <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
           <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
         <![endif]-->
+        <style> tr td:first-child { width: 1%; white-space: nowrap; } </style>
     </head>
 
     <body role='document'>
@@ -43,6 +44,13 @@
 
         <nav class='navbar navbar-default navbar-fixed-bottom'>
             <div class='container'>
+                <div class='navbar-header'>
+                    <button type='button' class='navbar-toggle collapsed'
+                        data-toggle='collapse' data-target='#docs-navbar'
+                        aria-expanded='false'>
+                        <span class='icon-bar'></span><span class='icon-bar'></span><span class='icon-bar'></span>
+                    </button>
+                </div>
                 <div class='navbar-collapse collapse' id='docs-navbar'>
                     <ul class='nav navbar-nav'>
                         <li><a href='#overview'>Overview</a></li>
@@ -85,42 +93,52 @@
 
             <p>Furthermore, there also exists a <strong>build pointer</strong> that is used to place the point commands in their appropriate locations. As the name suggests, point commands occupy a single point in space; the build pointer is used to determine where to place them.</p>
 
-            <p>Finally, Boomeranguish has <strong>metacommands</strong>, a second class of commands that do not occupy a point in space but rather operate on either the build pointer or the program's source code itself.</p>
+            <p>Finally, Boomeranguish has <strong>metacommands</strong>, a second class of commands that do not occupy a point in space but rather either operate on the build pointer, modify the effect of point commands, or operate on the program's source code itself.</p>
 
             <h2 id='ip'>The instruction pointer</h2>
 
             <p>The best way to describe the path of the instruction pointer is by example:</p>
 
-            <pre>   v  n=1
-  v ^
-   v^
-    ^
+            <pre>
+ v  n=1   v~  n=2   vv^  n=3
+v ^      v  ^      v   ^
+ v^      v  ^      v   ^
+  ^       v ^      v   ^
+           v^       v  ^
+            ^        v ^
+                      v^
+                       ^</pre>
 
-  v~  n=2
- v  ^
- v  ^
-  v ^
-   v^
-    ^
-
- vv^  n=3
-v   ^
-v   ^
-v   ^
- v  ^
-  v ^
-   v^
-    ^</pre>
-
-            <p>That is, when the boomerang is "thrown" with length <var>n</var>, it will first travel 3+2<var>n</var> spaces forwards, turn 90&deg; counterclockwise, move <var>n</var> more spaces forwards, turn 90&deg; counterclockwise and move <var>n</var> spaces again, and finally turn 45&deg; counterclockwise and return to its original position.</p>
+            <p>That is, when the boomerang is "thrown" with length <var>n</var>, it will first travel 1+2<var>n</var> spaces forwards, turn 90&deg; counterclockwise, move <var>n</var> more spaces forwards, turn 90&deg; counterclockwise and move <var>n</var> spaces again, and finally turn 45&deg; counterclockwise and return to its original position.</p>
 
             <p>Furthermore, the boomerang will travel up at a rate of one space per "movement" during the first half of its journey, and it will then travel down for the remainder. If there are an odd number of "steps" in the path, it will simply not move along the z-axis in the exact middle (as you can see in the <var>n</var>=2 example).</p>
 
+            <p>The instruction pointer always begins at (0, 0):</p>
+
+            <pre>         x-value
+        01234...    * z-values not shown---up is
+y-value 1             increasing; down is decreasing
+        2
+        3
+        4</pre>
+
+            <p>The instruction pointer may travel into negative x- or y-values; there is no "out of bounds."</p>
+
             <h2 id='bp'>The build pointer</h2>
 
-            <p>TODO</p>
+            <p>The build pointer is an "imaginary" point in space that represents where the next point command will be placed. By default, the build pointer is rightwards-moving; that is, every time you "place" a point command, the build pointer will increase by one in x-value.</p>
+
+            <p>The motion-direction of the build pointer can be changed via metacommands, as can its location (see the Metacommands section below).</p>
+
+            <p>Like the instruction pointer, the build pointer always starts at (0, 0) and may travel wherever it would like to.</p>
 
             <h2 id='point'>Point commands</h2>
+
+            This section is separated into subsections based on point commands (hereafter referred to as PCs) with similar functions.
+
+            <h3>IP-catch PCs</h3>
+
+            These PCs "catch" the instruction pointer and "throw" it in a different direction.
 
             <table class='table table-striped'>
                 <thead>
@@ -131,22 +149,113 @@ v   ^
                 </thead>
                 <tbody>
                     <tr>
-                        <td>foo</td>
-                        <td>bar</td>
+                        <td><code>h</code></td>
+                        <td>Throw boomerang left. [mnemonic: vim's hjkl]</td>
                     </tr>
                     <tr>
-                        <td>foo</td>
-                        <td>bar</td>
+                        <td><code>j</code></td>
+                        <td>Throw boomerang down.</td>
                     </tr>
                     <tr>
-                        <td>foo</td>
-                        <td>bar</td>
+                        <td><code>k</code></td>
+                        <td>Throw boomerang up.</td>
+                    </tr>
+                    <tr>
+                        <td><code>l</code></td>
+                        <td>Throw boomerang right.</td>
+                    </tr>
+                    <tr>
+                        <td><code>y</code></td>
+                        <td>Throw boomerang up-left. [mnemonic: nethack's yubn]</td>
+                    </tr>
+                    <tr>
+                        <td><code>u</code></td>
+                        <td>Throw boomerang up-right.</td>
+                    </tr>
+                    <tr>
+                        <td><code>b</code></td>
+                        <td>Throw boomerang down-left.</td>
+                    </tr>
+                    <tr>
+                        <td><code>n</code></td>
+                        <td>Throw boomerang down-right.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Math</h3>
+
+            <p>Here we introduce the syntax <code>foo/bar</code>, where <code>foo</code> represents the arguments that the "function" takes (<code>n</code> for numeric, <code>a</code> for array, <code>s</code> for specifically a string-array (1d array of ASCII codes), <code>b</code> for a "boolean" (a number; 0 is false, anything else is true), and <code>*</code> for anything) and <code>bar</code> represents the return value (which can be nothing).</p>
+
+            <p>This syntax allows command "overloading"&mdash;<code>C</code> means ceiling when called on a number but concat when called on two arrays, for example.</p>
+
+            <table class='table table-striped'>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>A</code> nn/n</td>
+                        <td>Addition.</td>
+                    </tr>
+                    <tr>
+                        <td><code>S</code> nn/n</td>
+                        <td>Subtraction.</td>
+                    </tr>
+                    <tr>
+                        <td><code>M</code> nn/n</td>
+                        <td>Multiplication.</td>
+                    </tr>
+                    <tr>
+                        <td><code>D</code> nn/n</td>
+                        <td>Division.</td>
+                    </tr>
+                    <tr>
+                        <td><code>R</code> nn/n</td>
+                        <td>Remainder (modulo).</td>
+                    </tr>
+                    <tr>
+                        <td><code>P</code> nn/n</td>
+                        <td>Power.</td>
+                    </tr>
+                    <tr>
+                        <td><code>F</code> n/n</td>
+                        <td>Floor.</td>
+                    </tr>
+                    <tr>
+                        <td><code>C</code> n/n</td>
+                        <td>Ceiling.</td>
+                    </tr>
+                    <tr>
+                        <td><code>R</code> n/n</td>
+                        <td>Round.</td>
+                    </tr>
+                    <tr>
+                        <td><code>A</code> n/n</td>
+                        <td>Absolute value.</td>
+                    </tr>
+                    <tr>
+                        <td><code>L</code> nn/b</td>
+                        <td>Less than.</td>
+                    </tr>
+                    <tr>
+                        <td><code>G</code> nn/b</td>
+                        <td>Greater than.</td>
                     </tr>
                 </tbody>
             </table>
 
             <h2 id='meta'>Metacommands</h2>
 
+            This section is also separated into several subsections of similar metacommands (hereafter referred to as MCs).
+
+            <h3>IP-catch-mod MCs</h3>
+
+            These MCs modify the IP-catch PCs described above.
+
             <table class='table table-striped'>
                 <thead>
                     <tr>
@@ -156,8 +265,41 @@ v   ^
                 </thead>
                 <tbody>
                     <tr>
-                        <td>foo</td>
-                        <td>bar</td>
+                        <td><code>&lt;</code></td>
+                        <td>Decrease "throw" speed (see examples in "the instruction pointer" section above).</td>
+                    </tr>
+                    <tr>
+                        <td><code>&gt;</code></td>
+                        <td>Increase "throw" speed.</td>
+                    </tr>
+                    <tr>
+                        <td><code>~</code></td>
+                        <td>Toggle antigravity (with antigravity on, the boomerang goes down and then up instead of up and then down).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Literals</h3>
+
+            <table class='table table-striped'>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>0-9</code></td>
+                        <td>Numeric literal. Literals act as a <em>single</em> point command, take zero arguments, and return one value.</td>
+                    </tr>
+                    <tr>
+                        <td><code>"</code></td>
+                        <td>Begin/end string literal. That is, array of ASCII codes. Escaping is not yet implemented (nor will it probably ever be).</td>
+                    </tr>
+                    <tr>
+                        <td><code>'</code></td>
+                        <td>Begin character literal. Wraps the ASCII code of the character that follows in an array.</td>
                     </tr>
                 </tbody>
             </table>
